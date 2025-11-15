@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Traffic Alert</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+      crossorigin="anonymous"
+    />
+  </head>
+  <body class="bg-light">
+    <div class="container py-5">
+      <div class="row justify-content-center">
+        <div class="col-lg-8">
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <h1 class="card-title text-center mb-4">Traffic Alert</h1>
+              <p class="text-muted">
+                Provide the origin and destination to calculate the live travel time. Optionally,
+                enable notifications to receive an email alert when the travel time is below the
+                configured threshold.
+              </p>
+              {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                  {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }}" role="alert">
+                      {{ message }}
+                    </div>
+                  {% endfor %}
+                {% endif %}
+              {% endwith %}
+
+              <form method="post" novalidate>
+                <div class="mb-3">
+                  <label for="origin" class="form-label">Origin</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="origin"
+                    name="origin"
+                    placeholder="300 Oracle Parkway, Redwood Shores, CA"
+                    required
+                    value="{{ result.origin if result else '' }}"
+                  />
+                </div>
+
+                <div class="mb-3">
+                  <label for="destination" class="form-label">Destination</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="destination"
+                    name="destination"
+                    placeholder="5336 Guenoc Valley Ln, Antioch, CA"
+                    required
+                    value="{{ result.destination if result else '' }}"
+                  />
+                </div>
+
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" id="notify" name="notify" />
+                  <label class="form-check-label" for="notify">Send email notification</label>
+                </div>
+
+                <div class="mb-3">
+                  <label for="email" class="form-label">Notification email</label>
+                  <input
+                    type="email"
+                    class="form-control"
+                    id="email"
+                    name="email"
+                    placeholder="you@example.com"
+                  />
+                  <div class="form-text">
+                    Emails are sent only when the travel time is below the configured threshold.
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label for="threshold" class="form-label">Alert threshold (minutes)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    class="form-control"
+                    id="threshold"
+                    name="threshold"
+                    value="{{ result.threshold if result else config.alert_threshold_minutes }}"
+                  />
+                </div>
+
+                <button type="submit" class="btn btn-primary">Check Travel Time</button>
+              </form>
+
+              {% if result %}
+                <hr class="my-4" />
+                <h2 class="h4">Current Travel Time</h2>
+                <p class="fs-5 mb-1">
+                  <strong>{{ result.eta_display }}</strong>
+                  <span class="text-muted">({{ '%.1f'|format(result.minutes) }} minutes)</span>
+                </p>
+                <p class="text-muted mb-0">
+                  Threshold: {{ result.threshold }} minutes ·
+                  {% if result.minutes <= result.threshold %}
+                    <span class="text-success">Within alert threshold</span>
+                  {% else %}
+                    <span class="text-danger">Above alert threshold</span>
+                  {% endif %}
+                </p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
