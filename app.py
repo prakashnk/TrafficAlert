@@ -6,6 +6,8 @@ from typing import Optional
 
 from flask import Flask, flash, redirect, render_template, request, url_for
 
+from dotenv import load_dotenv
+
 from traffic_alert import EmailDeliveryError, TravelTimeError, format_eta, get_travel_time, send_email_alert
 
 
@@ -39,6 +41,7 @@ def load_config() -> AppConfig:
 
 
 def create_app() -> Flask:
+    load_dotenv()
     app = Flask(__name__)
     app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret")
     app.config_obj = load_config()

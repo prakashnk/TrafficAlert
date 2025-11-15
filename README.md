@@ -23,23 +23,26 @@ A minimal Flask application that checks the current travel time between two addr
    pip install -r requirements.txt
    ```
 
-3. Configure the environment variables. Create a `.env` file or export them in your shell before running the server.
+3. Copy the sample environment file and fill in your own values:
 
    ```bash
-   export GOOGLE_MAPS_API_KEY="your-google-maps-api-key"
-   export EMAIL_FROM="your-gmail-address"           # optional, required for email alerts
-   export EMAIL_APP_PASSWORD="your-gmail-app-password"  # optional, required for email alerts
-   export EMAIL_SUBJECT="🚦 Traffic Alert"          # optional
-   export ALERT_THRESHOLD_MINUTES=120               # optional
-   export FLASK_SECRET_KEY="change-me"             # optional
+   cp .env.example .env
    ```
+
+   Update `.env` with your Google Maps API key. You only need to provide the email-related settings if you want the application to send alerts.
 
 ## Running the server
 
-Start the Flask development server:
+Start the Flask development server (the `python-dotenv` package automatically loads the `.env` file):
 
 ```bash
 flask --app app run --debug
+```
+
+Alternatively, you can launch the app directly with Python:
+
+```bash
+python app.py
 ```
 
 Open a browser and navigate to [http://127.0.0.1:5000](http://127.0.0.1:5000). Fill in the origin, destination, and (optionally) enable email notifications to receive alerts when the travel time drops below the specified threshold.
