@@ -4,7 +4,7 @@ import os
 from dataclasses import dataclass
 from typing import Optional
 
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
 
 from dotenv import load_dotenv
 
@@ -18,6 +18,7 @@ class AppConfig:
     email_password: Optional[str]
     email_subject: str
     alert_threshold_minutes: int
+    refresh_interval_seconds: int
 
 
 def load_config() -> AppConfig:
@@ -31,12 +32,18 @@ def load_config() -> AppConfig:
     except ValueError:
         threshold = 120
 
+    try:
+        refresh_seconds = int(os.getenv("CHECK_INTERVAL_SECONDS", "120"))
+    except ValueError:
+        refresh_seconds = 120
+
     return AppConfig(
         google_maps_api_key=api_key,
         email_from=email_from,
         email_password=email_password,
         email_subject=email_subject,
         alert_threshold_minutes=threshold,
+        refresh_interval_seconds=refresh_seconds,
     )
 
 
@@ -50,6 +57,102 @@ def create_app() -> Flask:
     def index():
         config: AppConfig = app.config_obj
         result = None
+
+        if request.method == "POST" and request.is_json:
+            data = request.get_json(force=True) or {}
+
+            origin = (data.get("origin") or "").strip()
+            destination = (data.get("destination") or "").strip()
+            email_to = (data.get("email") or "").strip()
+            notify = bool(data.get("notify"))
+            notification_sent = bool(data.get("notificationSent"))
+            threshold_str = data.get("threshold", str(config.alert_threshold_minutes))
+
+            if not origin or not destination:
+                return (
+                    jsonify({"ok": False, "error": "Provide both origin and destination."}),
+                    400,
+                )
+
+            if notify and not email_to:
+                return (
+                    jsonify({"ok": False, "error": "Enter an email address to notify."}),
+                    400,
+                )
+
+            try:
+                threshold = int(threshold_str)
+            except ValueError:
+                threshold = config.alert_threshold_minutes
+
+            api_key = config.google_maps_api_key
+            if not api_key:
+                return (
+                    jsonify(
+                        {
+                            "ok": False,
+                            "error": "Google Maps API key missing. Set GOOGLE_MAPS_API_KEY.",
+                        }
+                    ),
+                    400,
+                )
+
+            try:
+                travel_minutes = get_travel_time(api_key, origin, destination)
+            except TravelTimeError as exc:
+                return jsonify({"ok": False, "error": str(exc)}), 502
+
+            eta_display = format_eta(travel_minutes)
+            should_alert = travel_minutes <= threshold
+            alert_sent = False
+
+            if notify and should_alert and not notification_sent:
+                email_from = config.email_from
+                email_password = config.email_password
+
+                if not email_from or not email_password:
+                    return (
+                        jsonify(
+                            {
+                                "ok": False,
+                                "error": "Email credentials missing. Set EMAIL_FROM and EMAIL_APP_PASSWORD.",
+                            }
+                        ),
+                        400,
+                    )
+
+                body = (
+                    f"🚗 Traffic Alert: Travel time from {origin} to {destination} is now "
+                    f"{eta_display}."
+                )
+
+                try:
+                    send_email_alert(
+                        email_from=email_from,
+                        email_password=email_password,
+                        email_to=email_to,
+                        subject=config.email_subject,
+                        body=body,
+                    )
+                except EmailDeliveryError as exc:
+                    return jsonify({"ok": False, "error": str(exc)}), 502
+
+                alert_sent = True
+
+            payload = {
+                "ok": True,
+                "result": {
+                    "origin": origin,
+                    "destination": destination,
+                    "minutes": travel_minutes,
+                    "eta_display": eta_display,
+                    "threshold": threshold,
+                },
+                "should_alert": should_alert,
+                "alert_sent": alert_sent,
+            }
+
+            return jsonify(payload)
 
         if request.method == "POST":
             origin = request.form.get("origin", "").strip()

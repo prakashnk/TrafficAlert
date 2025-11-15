@@ -33,7 +33,7 @@
                 {% endif %}
               {% endwith %}
 
-              <form method="post" novalidate>
+              <form method="post" id="travel-form" novalidate>
                 <div class="mb-3">
                   <label for="origin" class="form-label">Origin</label>
                   <input
@@ -61,7 +61,7 @@
                 </div>
 
                 <div class="form-check form-switch mb-3">
-                  <input class="form-check-input" type="checkbox" id="notify" name="notify" />
+                  <input class="form-check-input" type="checkbox" id="notify" name="notify" value="1" />
                   <label class="form-check-label" for="notify">Send email notification</label>
                 </div>
 
@@ -94,26 +94,158 @@
                 <button type="submit" class="btn btn-primary">Check Travel Time</button>
               </form>
 
-              {% if result %}
+              <div id="alert-container" class="mt-3"></div>
+
+              <div id="result-section" class="d-none mt-4">
                 <hr class="my-4" />
                 <h2 class="h4">Current Travel Time</h2>
                 <p class="fs-5 mb-1">
-                  <strong>{{ result.eta_display }}</strong>
-                  <span class="text-muted">({{ '%.1f'|format(result.minutes) }} minutes)</span>
+                  <strong id="eta-display">--</strong>
+                  <span class="text-muted" id="eta-minutes"></span>
                 </p>
-                <p class="text-muted mb-0">
-                  Threshold: {{ result.threshold }} minutes ·
-                  {% if result.minutes <= result.threshold %}
-                    <span class="text-success">Within alert threshold</span>
-                  {% else %}
-                    <span class="text-danger">Above alert threshold</span>
-                  {% endif %}
+                <p class="text-muted mb-1">
+                  Threshold: <span id="threshold-value">--</span> minutes ·
+                  <span id="threshold-status" class="fw-semibold"></span>
                 </p>
-              {% endif %}
+                <p class="text-muted mb-1">
+                  Last updated: <span id="last-updated">--</span>
+                </p>
+                <p class="text-success fw-semibold d-none" id="notification-status"></p>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
+
+    <script>
+      (() => {
+        const form = document.getElementById("travel-form");
+        const alertContainer = document.getElementById("alert-container");
+        const resultSection = document.getElementById("result-section");
+        const etaDisplay = document.getElementById("eta-display");
+        const etaMinutes = document.getElementById("eta-minutes");
+        const thresholdValue = document.getElementById("threshold-value");
+        const thresholdStatus = document.getElementById("threshold-status");
+        const lastUpdated = document.getElementById("last-updated");
+        const notificationStatus = document.getElementById("notification-status");
+
+        const endpoint = "{{ url_for('index') }}";
+        const pollIntervalMs = {{ config.refresh_interval_seconds * 1000 }};
+
+        let pollTimer = null;
+        let notificationSent = false;
+
+        function clearAlert() {
+          alertContainer.innerHTML = "";
+        }
+
+        function showAlert(message, type = "info") {
+          alertContainer.innerHTML = `
+            <div class="alert alert-${type}" role="alert">
+              ${message}
+            </div>
+          `;
+        }
+
+        function stopPolling() {
+          if (pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+          }
+        }
+
+        function updateResult(payload) {
+          const { result, should_alert, alert_sent } = payload;
+
+          resultSection.classList.remove("d-none");
+          etaDisplay.textContent = result.eta_display;
+          etaMinutes.textContent = `(${result.minutes.toFixed(1)} minutes)`;
+          thresholdValue.textContent = result.threshold;
+
+          thresholdStatus.textContent = should_alert
+            ? "Within alert threshold"
+            : "Above alert threshold";
+          thresholdStatus.classList.toggle("text-success", should_alert);
+          thresholdStatus.classList.toggle("text-danger", !should_alert);
+
+          const now = new Date();
+          lastUpdated.textContent = now.toLocaleString();
+
+          if (alert_sent) {
+            notificationStatus.textContent = "Notification sent.";
+            notificationStatus.classList.remove("d-none");
+          }
+        }
+
+        async function fetchTravelTime() {
+          const formData = new FormData(form);
+          const payload = {
+            origin: (formData.get("origin") || "").trim(),
+            destination: (formData.get("destination") || "").trim(),
+            email: (formData.get("email") || "").trim(),
+            threshold: formData.get("threshold") || "",
+            notify: formData.get("notify") === "1" || formData.get("notify") === "on",
+            notificationSent,
+          };
+
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json",
+            },
+            body: JSON.stringify(payload),
+          });
+
+          const data = await response.json().catch(() => ({ ok: false }));
+
+          if (!response.ok || !data.ok) {
+            const message = data && data.error ? data.error : "Failed to retrieve travel time.";
+            throw new Error(message);
+          }
+
+          updateResult(data);
+
+          if (data.alert_sent) {
+            notificationSent = true;
+            stopPolling();
+          } else if (data.should_alert) {
+            stopPolling();
+          }
+
+          return data;
+        }
+
+        async function startPolling() {
+          clearAlert();
+          notificationStatus.classList.add("d-none");
+          notificationSent = false;
+
+          try {
+            const initial = await fetchTravelTime();
+
+            if (!initial.should_alert) {
+              pollTimer = setInterval(async () => {
+                try {
+                  await fetchTravelTime();
+                } catch (error) {
+                  showAlert(error.message, "danger");
+                  stopPolling();
+                }
+              }, pollIntervalMs);
+            }
+          } catch (error) {
+            showAlert(error.message, "danger");
+          }
+        }
+
+        form.addEventListener("submit", (event) => {
+          event.preventDefault();
+          stopPolling();
+          startPolling();
+        });
+      })();
+    </script>
   </body>
 </html>
