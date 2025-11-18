@@ -29,7 +29,7 @@ A minimal Flask application that checks the current travel time between two addr
    cp .env.example .env
    ```
 
-   Update `.env` with your Google Maps API key. You only need to provide the email-related settings if you want the application to send alerts.
+   Update `.env` with your Google Maps API key. You only need to provide the email-related settings if you want the application to send alerts. If your browser seems to cache an older stylesheet, set `ASSET_VERSION` in `.env` to any new value (for example, `ASSET_VERSION=20241118`) to force clients to download the refreshed Modern theme assets.
 
 ## Running the server
 
@@ -46,6 +46,10 @@ python app.py
 ```
 
 Open a browser and navigate to [http://127.0.0.1:5000](http://127.0.0.1:5000). Fill in the origin, destination, and (optionally) enable email notifications to receive alerts when the travel time drops below the specified threshold.
+
+### Refreshing the Modern theme
+
+The UI ships with a custom Modern skin that lives in `static/css/modern.css`. Browsers can occasionally cache that file aggressively. If you pull the latest code but still see the older styling, edit your `.env` file and set `ASSET_VERSION` to any unique value. Restart the Flask server and reload the page—the query parameter automatically appended to the stylesheet URL will force the browser to fetch the updated CSS.
 
 ## How it works
 
