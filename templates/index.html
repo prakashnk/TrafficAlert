@@ -25,7 +25,7 @@
     <div class="modern-hero">
       <div class="container">
         <div class="row justify-content-center">
-          <div class="col-xl-7 col-lg-8">
+          <div class="col-xxl-10 col-xl-11">
             <div class="card modern-card border-0">
               <div class="card-body p-4 p-md-5">
                 <div class="text-center mb-4">
@@ -37,125 +37,134 @@
                     chosen threshold.
                   </p>
                 </div>
-              {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                  {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else category }}" role="alert">
-                      {{ message }}
+                <div class="row g-4 align-items-start">
+                  <div class="col-lg-7">
+                  {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                      {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }}" role="alert">
+                          {{ message }}
+                        </div>
+                      {% endfor %}
+                    {% endif %}
+                  {% endwith %}
+
+                  <form method="post" id="travel-form" novalidate>
+                    <div class="mb-3">
+                      <label for="origin" class="form-label">Origin</label>
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="origin"
+                        name="origin"
+                        placeholder="300 Oracle Parkway, Redwood Shores, CA"
+                        required
+                        list="origin-suggestions"
+                        value="{{ result.origin if result else '' }}"
+                      />
+                      <datalist id="origin-suggestions"></datalist>
                     </div>
-                  {% endfor %}
-                {% endif %}
-              {% endwith %}
 
-              <form method="post" id="travel-form" novalidate>
-                <div class="mb-3">
-                  <label for="origin" class="form-label">Origin</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    id="origin"
-                    name="origin"
-                    placeholder="300 Oracle Parkway, Redwood Shores, CA"
-                    required
-                    list="origin-suggestions"
-                    value="{{ result.origin if result else '' }}"
-                  />
-                  <datalist id="origin-suggestions"></datalist>
-                </div>
+                    <div class="mb-3">
+                      <label for="destination" class="form-label">Destination</label>
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="destination"
+                        name="destination"
+                        placeholder="5336 Guenoc Valley Ln, Antioch, CA"
+                        required
+                        list="destination-suggestions"
+                        value="{{ result.destination if result else '' }}"
+                      />
+                      <datalist id="destination-suggestions"></datalist>
+                    </div>
 
-                <div class="mb-3">
-                  <label for="destination" class="form-label">Destination</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    id="destination"
-                    name="destination"
-                    placeholder="5336 Guenoc Valley Ln, Antioch, CA"
-                    required
-                    list="destination-suggestions"
-                    value="{{ result.destination if result else '' }}"
-                  />
-                  <datalist id="destination-suggestions"></datalist>
-                </div>
+                    <div class="form-check form-switch mb-3">
+                      <input class="form-check-input" type="checkbox" id="notify" name="notify" value="1" />
+                      <label class="form-check-label" for="notify">Send email notification</label>
+                    </div>
 
-                <div class="form-check form-switch mb-3">
-                  <input class="form-check-input" type="checkbox" id="notify" name="notify" value="1" />
-                  <label class="form-check-label" for="notify">Send email notification</label>
-                </div>
+                    <div class="mb-3">
+                      <label for="email" class="form-label">Notification email</label>
+                      <input
+                        type="email"
+                        class="form-control"
+                        id="email"
+                        name="email"
+                        placeholder="you@example.com"
+                      />
+                      <div class="form-text">
+                        Emails are sent only when the travel time is below the configured threshold.
+                      </div>
+                    </div>
 
-                <div class="mb-3">
-                  <label for="email" class="form-label">Notification email</label>
-                  <input
-                    type="email"
-                    class="form-control"
-                    id="email"
-                    name="email"
-                    placeholder="you@example.com"
-                  />
-                  <div class="form-text">
-                    Emails are sent only when the travel time is below the configured threshold.
+                    <div class="mb-3">
+                      <label for="threshold" class="form-label">Alert threshold (minutes)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        class="form-control"
+                        id="threshold"
+                        name="threshold"
+                        value="{{ result.threshold if result else config.alert_threshold_minutes }}"
+                      />
+                    </div>
+
+                    <button type="submit" class="btn btn-modern-primary w-100 py-2">Check Travel Time</button>
+                  </form>
+
+                  <div id="alert-container" class="mt-3"></div>
+                  </div>
+                  <div class="col-lg-5">
+                    <aside class="modern-status-panel h-100">
+                      <div id="result-section" class="d-none">
+                        <div class="d-flex flex-column gap-3">
+                          <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                            <div>
+                              <p class="text-uppercase small text-accent mb-2">Current travel time</p>
+                              <p class="mb-0" id="eta-display">--</p>
+                            </div>
+                            <span id="threshold-status" class="status-pill waiting">Monitoring</span>
+                          </div>
+                          <div class="d-flex flex-wrap align-items-center gap-2">
+                            <span class="badge badge-modern" id="eta-minutes">--</span>
+                          </div>
+                          <div class="status-meta">
+                            <div>
+                              <span class="text-muted text-uppercase small">Threshold</span>
+                              <p class="mb-0 fw-semibold" id="threshold-value">--</p>
+                            </div>
+                            <div>
+                              <span class="text-muted text-uppercase small">Last updated</span>
+                              <p class="mb-0" id="last-updated">--</p>
+                            </div>
+                          </div>
+                          <p class="text-success fw-semibold d-none" id="notification-status"></p>
+                        </div>
+                      </div>
+                      <div id="status-placeholder" class="status-placeholder">
+                        <p class="fw-semibold mb-1">Monitoring traffic</p>
+                        <p class="mb-0">We'll display live travel stats here once you start tracking.</p>
+                      </div>
+                      <div
+                        id="busy-indicator"
+                        class="modern-busy-indicator d-none mt-4"
+                        role="status"
+                        aria-live="polite"
+                      >
+                        <div class="spinner-border text-accent" role="status" aria-hidden="true"></div>
+                        <div>
+                          <p class="mb-1 fw-semibold text-accent">Monitoring traffic</p>
+                          <small id="busy-text"
+                            >We're keeping an eye on traffic until the ETA is below your alert
+                            threshold.</small
+                          >
+                        </div>
+                      </div>
+                    </aside>
                   </div>
                 </div>
-
-                <div class="mb-3">
-                  <label for="threshold" class="form-label">Alert threshold (minutes)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    class="form-control"
-                    id="threshold"
-                    name="threshold"
-                    value="{{ result.threshold if result else config.alert_threshold_minutes }}"
-                  />
-                </div>
-
-                <button type="submit" class="btn btn-modern-primary w-100 py-2">Check Travel Time</button>
-              </form>
-
-              <div id="alert-container" class="mt-3"></div>
-
-              <div id="result-section" class="d-none mt-4">
-                <div class="modern-divider"></div>
-                <div class="d-flex flex-column flex-md-row align-items-md-center gap-4">
-                  <div>
-                    <p class="text-uppercase small text-muted mb-2">Current travel time</p>
-                    <p class="mb-0" id="eta-display">--</p>
-                  </div>
-                  <div>
-                    <span class="badge badge-modern" id="eta-minutes">--</span>
-                  </div>
-                  <span id="threshold-status" class="status-pill waiting">Monitoring</span>
-                </div>
-
-                <ul class="list-unstyled mt-4 mb-0">
-                  <li class="mb-2">
-                    <span class="text-muted">Threshold</span>
-                    <span class="badge badge-muted ms-2" id="threshold-value">--</span>
-                  </li>
-                  <li>
-                    <span class="text-muted">Last updated</span>
-                    <span class="ms-2" id="last-updated">--</span>
-                  </li>
-                </ul>
-
-                <p class="text-success fw-semibold d-none mt-3" id="notification-status"></p>
-              </div>
-
-              <div
-                id="busy-indicator"
-                class="modern-busy-indicator d-none mt-4"
-                role="status"
-                aria-live="polite"
-              >
-                <div class="spinner-border text-accent" role="status" aria-hidden="true"></div>
-                <div>
-                  <p class="mb-1 fw-semibold text-accent">Monitoring traffic</p>
-                  <small id="busy-text"
-                    >We'll keep checking every few minutes until the ETA dips below your alert
-                    threshold.</small
-                  >
-                </div>
-              </div>
 
               <footer class="modern-footer">
                 Powered by Google Maps Directions & Gmail SMTP
@@ -179,6 +188,7 @@
         const notificationStatus = document.getElementById("notification-status");
         const busyIndicator = document.getElementById("busy-indicator");
         const busyText = document.getElementById("busy-text");
+        const statusPlaceholder = document.getElementById("status-placeholder");
 
         const endpoint = "{{ url_for('index') }}";
         const autocompleteEndpoint = "{{ url_for('autocomplete') }}";
@@ -222,9 +232,18 @@
           setBusyIndicator(false);
         }
 
+        function toggleStatusPlaceholder(show) {
+          if (!statusPlaceholder) {
+            return;
+          }
+
+          statusPlaceholder.classList.toggle("d-none", !show);
+        }
+
         function updateResult(payload) {
           const { result, should_alert, alert_sent } = payload;
 
+          toggleStatusPlaceholder(false);
           resultSection.classList.remove("d-none");
           etaDisplay.textContent = result.eta_display;
           etaMinutes.textContent = `${result.minutes.toFixed(1)} minutes`;

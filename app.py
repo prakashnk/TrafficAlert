@@ -260,37 +260,74 @@ def create_app() -> Flask:
                 400,
             )
 
-        params = {
-            "input": query,
-            "types": "geocode",
-            "key": api_key,
-        }
+        def places_autocomplete() -> tuple[list[str], Optional[str]]:
+            params = {
+                "input": query,
+                "types": "geocode",
+                "key": api_key,
+            }
 
-        try:
-            response = requests.get(
-                "https://maps.googleapis.com/maps/api/place/autocomplete/json",
-                params=params,
-                timeout=5,
-            )
-            data = response.json()
-        except Exception:
-            return (
-                jsonify({"ok": False, "error": "Failed to fetch address suggestions."}),
-                502,
-            )
+            try:
+                response = requests.get(
+                    "https://maps.googleapis.com/maps/api/place/autocomplete/json",
+                    params=params,
+                    timeout=5,
+                )
+                data = response.json()
+            except requests.RequestException as exc:
+                return [], f"Failed to contact Places API: {exc}"
 
-        status = data.get("status", "UNKNOWN")
-        if status not in {"OK", "ZERO_RESULTS"}:
+            status = data.get("status", "UNKNOWN")
+            if status in {"OK", "ZERO_RESULTS"}:
+                predictions = [
+                    prediction.get("description", "")
+                    for prediction in data.get("predictions", [])
+                    if prediction.get("description")
+                ]
+                return predictions, None
+
             message = data.get("error_message") or f"Places API error: {status}"
-            return jsonify({"ok": False, "error": message}), 502
+            return [], message
 
-        predictions = [
-            prediction.get("description", "")
-            for prediction in data.get("predictions", [])
-            if prediction.get("description")
-        ]
+        def geocode_fallback() -> tuple[list[str], Optional[str]]:
+            params = {
+                "address": query,
+                "key": api_key,
+            }
 
-        return jsonify({"ok": True, "predictions": predictions})
+            try:
+                response = requests.get(
+                    "https://maps.googleapis.com/maps/api/geocode/json",
+                    params=params,
+                    timeout=5,
+                )
+                data = response.json()
+            except requests.RequestException as exc:
+                return [], f"Failed to contact Geocoding API: {exc}"
+
+            status = data.get("status", "UNKNOWN")
+            if status in {"OK", "ZERO_RESULTS"}:
+                results = [
+                    result.get("formatted_address", "")
+                    for result in data.get("results", [])
+                    if result.get("formatted_address")
+                ]
+                return results, None
+
+            message = data.get("error_message") or f"Geocoding API error: {status}"
+            return [], message
+
+        predictions, error_message = places_autocomplete()
+
+        if predictions or error_message is None:
+            return jsonify({"ok": True, "predictions": predictions})
+
+        fallback_predictions, fallback_error = geocode_fallback()
+        if fallback_predictions:
+            return jsonify({"ok": True, "predictions": fallback_predictions})
+
+        message = fallback_error or error_message or "Unable to fetch address suggestions."
+        return jsonify({"ok": False, "error": message}), 200
 
     return app
 

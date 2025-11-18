@@ -5,7 +5,7 @@ A minimal Flask application that checks the current travel time between two addr
 ## Prerequisites
 
 - Python 3.10+
-- Google Maps Directions API key
+- Google Maps Directions API key (the Places API is recommended for richer autocomplete suggestions, but the app now falls back to the Geocoding API when Places isn't enabled)
 - Gmail account with an [App Password](https://support.google.com/accounts/answer/185833) (required only if you enable email notifications)
 
 ## Setup
@@ -55,6 +55,7 @@ The UI ships with a custom Modern skin that lives in `static/css/modern.css`. Br
 
 - The form submits the origin and destination addresses.
 - The application queries the Google Maps Directions API for real-time traffic information and displays the ETA in a friendly format.
+- Address suggestions come from the Google Places Autocomplete API when available, and automatically fall back to the Geocoding API when Places access is not configured for your key.
 - If notifications are enabled and the travel time is below the configured threshold, an email alert is sent using the Gmail SMTP server.
 
 ## Development notes
