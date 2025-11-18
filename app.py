@@ -4,7 +4,6 @@ import os
 from dataclasses import dataclass
 from typing import Optional
 
-import requests
 from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
 
 from dotenv import load_dotenv
@@ -231,58 +230,6 @@ def create_app() -> Flask:
                 )
 
         return render_template("index.html", result=result, config=app.config_obj)
-
-    @app.route("/autocomplete")
-    def autocomplete():
-        config: AppConfig = app.config_obj
-        query = (request.args.get("q") or "").strip()
-
-        if not query:
-            return jsonify({"ok": True, "predictions": []})
-
-        api_key = config.google_maps_api_key
-        if not api_key:
-            return (
-                jsonify(
-                    {
-                        "ok": False,
-                        "error": "Google Maps API key missing. Set GOOGLE_MAPS_API_KEY.",
-                    }
-                ),
-                400,
-            )
-
-        params = {
-            "input": query,
-            "types": "geocode",
-            "key": api_key,
-        }
-
-        try:
-            response = requests.get(
-                "https://maps.googleapis.com/maps/api/place/autocomplete/json",
-                params=params,
-                timeout=5,
-            )
-            data = response.json()
-        except Exception:
-            return (
-                jsonify({"ok": False, "error": "Failed to fetch address suggestions."}),
-                502,
-            )
-
-        status = data.get("status", "UNKNOWN")
-        if status not in {"OK", "ZERO_RESULTS"}:
-            message = data.get("error_message") or f"Places API error: {status}"
-            return jsonify({"ok": False, "error": message}), 502
-
-        predictions = [
-            prediction.get("description", "")
-            for prediction in data.get("predictions", [])
-            if prediction.get("description")
-        ]
-
-        return jsonify({"ok": True, "predictions": predictions})
 
     return app
 

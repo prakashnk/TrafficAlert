@@ -4,36 +4,25 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Traffic Alert</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
       rel="stylesheet"
       integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
       crossorigin="anonymous"
     />
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/modern.css') }}" />
   </head>
-  <body class="theme-modern">
-    <div class="modern-hero">
-      <div class="container">
-        <div class="row justify-content-center">
-          <div class="col-xl-7 col-lg-8">
-            <div class="card modern-card border-0">
-              <div class="card-body p-4 p-md-5">
-                <div class="text-center mb-4">
-                  <p class="text-uppercase small text-accent mb-2">Live Commute Monitor</p>
-                  <h1 class="card-title mb-2">Traffic Alert</h1>
-                  <p class="mb-0">
-                    Provide the origin and destination to calculate the live travel time. Enable
-                    notifications to receive an email alert the moment the ETA drops below your
-                    chosen threshold.
-                  </p>
-                </div>
+  <body class="bg-light">
+    <div class="container py-5">
+      <div class="row justify-content-center">
+        <div class="col-lg-8">
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <h1 class="card-title text-center mb-4">Traffic Alert</h1>
+              <p class="text-muted">
+                Provide the origin and destination to calculate the live travel time. Optionally,
+                enable notifications to receive an email alert when the travel time is below the
+                configured threshold.
+              </p>
               {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                   {% for category, message in messages %}
@@ -54,10 +43,8 @@
                     name="origin"
                     placeholder="300 Oracle Parkway, Redwood Shores, CA"
                     required
-                    list="origin-suggestions"
                     value="{{ result.origin if result else '' }}"
                   />
-                  <datalist id="origin-suggestions"></datalist>
                 </div>
 
                 <div class="mb-3">
@@ -69,10 +56,8 @@
                     name="destination"
                     placeholder="5336 Guenoc Valley Ln, Antioch, CA"
                     required
-                    list="destination-suggestions"
                     value="{{ result.destination if result else '' }}"
                   />
-                  <datalist id="destination-suggestions"></datalist>
                 </div>
 
                 <div class="form-check form-switch mb-3">
@@ -106,57 +91,27 @@
                   />
                 </div>
 
-                <button type="submit" class="btn btn-modern-primary w-100 py-2">Check Travel Time</button>
+                <button type="submit" class="btn btn-primary">Check Travel Time</button>
               </form>
 
               <div id="alert-container" class="mt-3"></div>
 
               <div id="result-section" class="d-none mt-4">
-                <div class="modern-divider"></div>
-                <div class="d-flex flex-column flex-md-row align-items-md-center gap-4">
-                  <div>
-                    <p class="text-uppercase small text-muted mb-2">Current travel time</p>
-                    <p class="mb-0" id="eta-display">--</p>
-                  </div>
-                  <div>
-                    <span class="badge badge-modern" id="eta-minutes">--</span>
-                  </div>
-                  <span id="threshold-status" class="status-pill waiting">Monitoring</span>
-                </div>
-
-                <ul class="list-unstyled mt-4 mb-0">
-                  <li class="mb-2">
-                    <span class="text-muted">Threshold</span>
-                    <span class="badge badge-muted ms-2" id="threshold-value">--</span>
-                  </li>
-                  <li>
-                    <span class="text-muted">Last updated</span>
-                    <span class="ms-2" id="last-updated">--</span>
-                  </li>
-                </ul>
-
-                <p class="text-success fw-semibold d-none mt-3" id="notification-status"></p>
+                <hr class="my-4" />
+                <h2 class="h4">Current Travel Time</h2>
+                <p class="fs-5 mb-1">
+                  <strong id="eta-display">--</strong>
+                  <span class="text-muted" id="eta-minutes"></span>
+                </p>
+                <p class="text-muted mb-1">
+                  Threshold: <span id="threshold-value">--</span> minutes ·
+                  <span id="threshold-status" class="fw-semibold"></span>
+                </p>
+                <p class="text-muted mb-1">
+                  Last updated: <span id="last-updated">--</span>
+                </p>
+                <p class="text-success fw-semibold d-none" id="notification-status"></p>
               </div>
-
-              <div
-                id="busy-indicator"
-                class="modern-busy-indicator d-none mt-4"
-                role="status"
-                aria-live="polite"
-              >
-                <div class="spinner-border text-accent" role="status" aria-hidden="true"></div>
-                <div>
-                  <p class="mb-1 fw-semibold text-accent">Monitoring traffic</p>
-                  <small id="busy-text"
-                    >We'll keep checking every few minutes until the ETA dips below your alert
-                    threshold.</small
-                  >
-                </div>
-              </div>
-
-              <footer class="modern-footer">
-                Powered by Google Maps Directions & Gmail SMTP
-              </footer>
             </div>
           </div>
         </div>
@@ -174,14 +129,9 @@
         const thresholdStatus = document.getElementById("threshold-status");
         const lastUpdated = document.getElementById("last-updated");
         const notificationStatus = document.getElementById("notification-status");
-        const busyIndicator = document.getElementById("busy-indicator");
-        const busyText = document.getElementById("busy-text");
 
         const endpoint = "{{ url_for('index') }}";
-        const autocompleteEndpoint = "{{ url_for('autocomplete') }}";
         const pollIntervalMs = {{ config.refresh_interval_seconds * 1000 }};
-        const AUTOCOMPLETE_MIN_CHARS = 3;
-        const AUTOCOMPLETE_DEBOUNCE_MS = 300;
 
         let pollTimer = null;
         let notificationSent = false;
@@ -198,25 +148,11 @@
           `;
         }
 
-        function setBusyIndicator(active, message) {
-          if (!busyIndicator) {
-            return;
-          }
-
-          if (message && busyText) {
-            busyText.textContent = message;
-          }
-
-          busyIndicator.classList.toggle("d-none", !active);
-        }
-
         function stopPolling() {
           if (pollTimer) {
             clearInterval(pollTimer);
             pollTimer = null;
           }
-
-          setBusyIndicator(false);
         }
 
         function updateResult(payload) {
@@ -224,16 +160,14 @@
 
           resultSection.classList.remove("d-none");
           etaDisplay.textContent = result.eta_display;
-          etaMinutes.textContent = `${result.minutes.toFixed(1)} minutes`;
-          thresholdValue.textContent = `${result.threshold} minutes`;
+          etaMinutes.textContent = `(${result.minutes.toFixed(1)} minutes)`;
+          thresholdValue.textContent = result.threshold;
 
-          const waitingForDrop = !should_alert && !alert_sent;
           thresholdStatus.textContent = should_alert
             ? "Within alert threshold"
-            : "Monitoring traffic";
-          thresholdStatus.classList.add("status-pill");
-          thresholdStatus.classList.toggle("alert-ready", should_alert);
-          thresholdStatus.classList.toggle("waiting", waitingForDrop);
+            : "Above alert threshold";
+          thresholdStatus.classList.toggle("text-success", should_alert);
+          thresholdStatus.classList.toggle("text-danger", !should_alert);
 
           const now = new Date();
           lastUpdated.textContent = now.toLocaleString();
@@ -242,67 +176,6 @@
             notificationStatus.textContent = "Notification sent.";
             notificationStatus.classList.remove("d-none");
           }
-
-          setBusyIndicator(
-            waitingForDrop,
-            "We're keeping an eye on traffic until the ETA is below your alert threshold.",
-          );
-        }
-
-        function attachAutocomplete(inputId, datalistId) {
-          const input = document.getElementById(inputId);
-          const datalist = document.getElementById(datalistId);
-          if (!input || !datalist) {
-            return;
-          }
-
-          input.setAttribute("autocomplete", "off");
-
-          let debounceTimer;
-          let lastValue = "";
-
-          const renderOptions = (options) => {
-            datalist.innerHTML = "";
-            options.forEach((option) => {
-              const element = document.createElement("option");
-              element.value = option;
-              datalist.appendChild(element);
-            });
-          };
-
-          input.addEventListener("input", () => {
-            const query = input.value.trim();
-
-            if (query.length < AUTOCOMPLETE_MIN_CHARS) {
-              renderOptions([]);
-              lastValue = "";
-              return;
-            }
-
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(async () => {
-              if (!query || query === lastValue) {
-                return;
-              }
-
-              lastValue = query;
-
-              try {
-                const response = await fetch(
-                  `${autocompleteEndpoint}?q=${encodeURIComponent(query)}`,
-                );
-                const data = await response.json();
-
-                if (!response.ok || !data.ok) {
-                  throw new Error(data.error || "Failed to load suggestions");
-                }
-
-                renderOptions(data.predictions || []);
-              } catch (error) {
-                console.warn("Autocomplete failed", error);
-              }
-            }, AUTOCOMPLETE_DEBOUNCE_MS);
-          });
         }
 
         async function fetchTravelTime() {
@@ -339,8 +212,6 @@
             stopPolling();
           } else if (data.should_alert) {
             stopPolling();
-          } else {
-            setBusyIndicator(true);
           }
 
           return data;
@@ -369,13 +240,9 @@
           }
         }
 
-        attachAutocomplete("origin", "origin-suggestions");
-        attachAutocomplete("destination", "destination-suggestions");
-
         form.addEventListener("submit", (event) => {
           event.preventDefault();
           stopPolling();
-          setBusyIndicator(true, "Fetching the latest travel time...");
           startPolling();
         });
       })();
