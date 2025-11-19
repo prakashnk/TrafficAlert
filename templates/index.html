@@ -52,32 +52,44 @@
                   <form method="post" id="travel-form" novalidate>
                     <div class="mb-3">
                       <label for="origin" class="form-label">Origin</label>
-                      <input
-                        type="text"
-                        class="form-control"
-                        id="origin"
-                        name="origin"
-                        placeholder="300 Oracle Parkway, Redwood Shores, CA"
-                        required
-                        list="origin-suggestions"
-                        value="{{ result.origin if result else '' }}"
-                      />
-                      <datalist id="origin-suggestions"></datalist>
+                      <div class="autocomplete-wrapper">
+                        <input
+                          type="text"
+                          class="form-control"
+                          id="origin"
+                          name="origin"
+                          placeholder="300 Oracle Parkway, Redwood Shores, CA"
+                          required
+                          autocomplete="off"
+                          aria-autocomplete="list"
+                          aria-controls="origin-suggestions"
+                          value="{{ result.origin if result else '' }}"
+                        />
+                        <div id="origin-suggestions" class="autocomplete-menu d-none" role="listbox"></div>
+                      </div>
                     </div>
 
                     <div class="mb-3">
                       <label for="destination" class="form-label">Destination</label>
-                      <input
-                        type="text"
-                        class="form-control"
-                        id="destination"
-                        name="destination"
-                        placeholder="5336 Guenoc Valley Ln, Antioch, CA"
-                        required
-                        list="destination-suggestions"
-                        value="{{ result.destination if result else '' }}"
-                      />
-                      <datalist id="destination-suggestions"></datalist>
+                      <div class="autocomplete-wrapper">
+                        <input
+                          type="text"
+                          class="form-control"
+                          id="destination"
+                          name="destination"
+                          placeholder="5336 Guenoc Valley Ln, Antioch, CA"
+                          required
+                          autocomplete="off"
+                          aria-autocomplete="list"
+                          aria-controls="destination-suggestions"
+                          value="{{ result.destination if result else '' }}"
+                        />
+                        <div
+                          id="destination-suggestions"
+                          class="autocomplete-menu d-none"
+                          role="listbox"
+                        ></div>
+                      </div>
                     </div>
 
                     <div class="form-check form-switch mb-3">
@@ -271,32 +283,106 @@
           );
         }
 
-        function attachAutocomplete(inputId, datalistId) {
+        function attachAutocomplete(inputId, menuId) {
           const input = document.getElementById(inputId);
-          const datalist = document.getElementById(datalistId);
-          if (!input || !datalist) {
+          const menu = document.getElementById(menuId);
+          if (!input || !menu) {
             return;
           }
 
           input.setAttribute("autocomplete", "off");
+          input.setAttribute("role", "combobox");
 
           let debounceTimer;
           let lastValue = "";
+          let options = [];
+          let activeIndex = -1;
 
-          const renderOptions = (options) => {
-            datalist.innerHTML = "";
-            options.forEach((option) => {
-              const element = document.createElement("option");
-              element.value = option;
-              datalist.appendChild(element);
+          const closeMenu = () => {
+            options = [];
+            activeIndex = -1;
+            menu.innerHTML = "";
+            menu.classList.add("d-none");
+            input.setAttribute("aria-expanded", "false");
+          };
+
+          const highlightActive = () => {
+            const children = Array.from(menu.children);
+            children.forEach((child, index) => {
+              child.classList.toggle("active", index === activeIndex);
             });
           };
+
+          const commitValue = (value) => {
+            input.value = value;
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+            closeMenu();
+          };
+
+          const renderOptions = (list) => {
+            options = list;
+            menu.innerHTML = "";
+
+            if (!list.length) {
+              closeMenu();
+              return;
+            }
+
+            list.forEach((option, index) => {
+              const button = document.createElement("button");
+              button.type = "button";
+              button.className = "autocomplete-option";
+              button.textContent = option;
+              button.setAttribute("role", "option");
+              button.addEventListener("mousedown", (event) => {
+                event.preventDefault();
+                commitValue(option);
+              });
+              menu.appendChild(button);
+            });
+
+            menu.classList.remove("d-none");
+            input.setAttribute("aria-expanded", "true");
+            activeIndex = -1;
+            highlightActive();
+          };
+
+          input.addEventListener("keydown", (event) => {
+            if (!options.length) {
+              return;
+            }
+
+            if (event.key === "ArrowDown") {
+              event.preventDefault();
+              activeIndex = (activeIndex + 1) % options.length;
+              highlightActive();
+            } else if (event.key === "ArrowUp") {
+              event.preventDefault();
+              activeIndex = (activeIndex - 1 + options.length) % options.length;
+              highlightActive();
+            } else if (event.key === "Enter") {
+              if (activeIndex >= 0 && activeIndex < options.length) {
+                event.preventDefault();
+                commitValue(options[activeIndex]);
+              }
+            } else if (event.key === "Escape") {
+              event.preventDefault();
+              closeMenu();
+            }
+          });
+
+          document.addEventListener("click", (event) => {
+            if (event.target === input || menu.contains(event.target)) {
+              return;
+            }
+            closeMenu();
+          });
 
           input.addEventListener("input", () => {
             const query = input.value.trim();
 
             if (query.length < AUTOCOMPLETE_MIN_CHARS) {
-              renderOptions([]);
+              closeMenu();
               lastValue = "";
               return;
             }
@@ -322,6 +408,7 @@
                 renderOptions(data.predictions || []);
               } catch (error) {
                 console.warn("Autocomplete failed", error);
+                closeMenu();
               }
             }, AUTOCOMPLETE_DEBOUNCE_MS);
           });

@@ -59,6 +59,45 @@ body.theme-modern {
   background-color: rgba(15, 23, 42, 0.8);
 }
 
+.theme-modern .autocomplete-wrapper {
+  position: relative;
+}
+
+.theme-modern .autocomplete-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 0.85rem;
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 20;
+  box-shadow: 0 15px 30px rgba(2, 6, 23, 0.55);
+}
+
+.theme-modern .autocomplete-menu.d-none {
+  display: none;
+}
+
+.theme-modern .autocomplete-option {
+  width: 100%;
+  text-align: left;
+  padding: 0.65rem 0.85rem;
+  background: transparent;
+  border: none;
+  color: var(--modern-text);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.theme-modern .autocomplete-option:hover,
+.theme-modern .autocomplete-option.active {
+  background: rgba(56, 189, 248, 0.18);
+  color: var(--modern-text);
+}
+
 .theme-modern .modern-card .form-switch .form-check-input {
   background-color: rgba(15, 23, 42, 0.5);
   border-color: rgba(148, 163, 184, 0.4);
