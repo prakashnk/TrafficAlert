@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Traffic Alert</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/modern.css', v=config.asset_version) }}"
+    />
+  </head>
+  <body class="theme-modern">
+    <div class="modern-hero">
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-xxl-10 col-xl-11">
+            <div class="card modern-card border-0">
+              <div class="card-body p-4 p-md-5">
+                <div class="text-center mb-4">
+                  <p class="text-uppercase small text-accent mb-2">Live Commute Monitor</p>
+                  <h1 class="card-title mb-2">Traffic Alert</h1>
+                  <p class="mb-0">
+                    Provide the origin and destination to calculate the live travel time. Enable
+                    notifications to receive an email alert the moment the ETA drops below your
+                    chosen threshold.
+                  </p>
+                </div>
+                <div class="row g-4 align-items-start">
+                  <div class="col-lg-7">
+                  {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                      {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }}" role="alert">
+                          {{ message }}
+                        </div>
+                      {% endfor %}
+                    {% endif %}
+                  {% endwith %}
+
+                  <form method="post" id="travel-form" novalidate>
+                    <div class="mb-3">
+                      <label for="origin" class="form-label">Origin</label>
+                      <div class="autocomplete-wrapper">
+                        <input
+                          type="text"
+                          class="form-control"
+                          id="origin"
+                          name="origin"
+                          placeholder="300 Oracle Parkway, Redwood Shores, CA"
+                          required
+                          autocomplete="off"
+                          aria-autocomplete="list"
+                          aria-controls="origin-suggestions"
+                          value="{{ result.origin if result else '' }}"
+                        />
+                        <div id="origin-suggestions" class="autocomplete-menu d-none" role="listbox"></div>
+                      </div>
+                    </div>
+
+                    <div class="mb-3">
+                      <label for="destination" class="form-label">Destination</label>
+                      <div class="autocomplete-wrapper">
+                        <input
+                          type="text"
+                          class="form-control"
+                          id="destination"
+                          name="destination"
+                          placeholder="5336 Guenoc Valley Ln, Antioch, CA"
+                          required
+                          autocomplete="off"
+                          aria-autocomplete="list"
+                          aria-controls="destination-suggestions"
+                          value="{{ result.destination if result else '' }}"
+                        />
+                        <div
+                          id="destination-suggestions"
+                          class="autocomplete-menu d-none"
+                          role="listbox"
+                        ></div>
+                      </div>
+                    </div>
+
+                    <div class="form-check form-switch mb-3">
+                      <input class="form-check-input" type="checkbox" id="notify" name="notify" value="1" />
+                      <label class="form-check-label" for="notify">Send email notification</label>
+                    </div>
+
+                    <div class="mb-3">
+                      <label for="email" class="form-label">Notification email</label>
+                      <input
+                        type="email"
+                        class="form-control"
+                        id="email"
+                        name="email"
+                        placeholder="you@example.com"
+                      />
+                      <div class="form-text">
+                        Emails are sent only when the travel time is below the configured threshold.
+                      </div>
+                    </div>
+
+                    <div class="mb-3">
+                      <label for="threshold" class="form-label">Alert threshold (minutes)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        class="form-control"
+                        id="threshold"
+                        name="threshold"
+                        value="{{ result.threshold if result else config.alert_threshold_minutes }}"
+                      />
+                    </div>
+
+                    <button type="submit" class="btn btn-modern-primary w-100 py-2">Check Travel Time</button>
+                  </form>
+
+                  <div id="alert-container" class="mt-3"></div>
+                  </div>
+                  <div class="col-lg-5">
+                    <aside class="modern-status-panel h-100">
+                      <div id="result-section" class="d-none">
+                        <div class="d-flex flex-column gap-3">
+                          <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                            <div>
+                              <p class="text-uppercase small text-accent mb-2">Current travel time</p>
+                              <p class="mb-0" id="eta-display">--</p>
+                            </div>
+                            <span id="threshold-status" class="status-pill waiting">Monitoring</span>
+                          </div>
+                          <div class="d-flex flex-wrap align-items-center gap-2">
+                            <span class="badge badge-modern" id="eta-minutes">--</span>
+                          </div>
+                          <div class="status-meta">
+                            <div>
+                              <span class="text-muted text-uppercase small">Threshold</span>
+                              <p class="mb-0 fw-semibold" id="threshold-value">--</p>
+                            </div>
+                            <div>
+                              <span class="text-muted text-uppercase small">Last updated</span>
+                              <p class="mb-0" id="last-updated">--</p>
+                            </div>
+                          </div>
+                          <p class="text-success fw-semibold d-none" id="notification-status"></p>
+                        </div>
+                      </div>
+                      <div id="status-placeholder" class="status-placeholder">
+                        <p class="fw-semibold mb-1">Monitoring traffic</p>
+                        <p class="mb-0">We'll display live travel stats here once you start tracking.</p>
+                      </div>
+                      <div
+                        id="busy-indicator"
+                        class="modern-busy-indicator d-none mt-4"
+                        role="status"
+                        aria-live="polite"
+                      >
+                        <div class="spinner-border text-accent" role="status" aria-hidden="true"></div>
+                        <div>
+                          <p class="mb-1 fw-semibold text-accent">Monitoring traffic</p>
+                          <small id="busy-text"
+                            >We're keeping an eye on traffic until the ETA is below your alert
+                            threshold.</small
+                          >
+                        </div>
+                      </div>
+                    </aside>
+                  </div>
+                </div>
+
+              <footer class="modern-footer">
+                Powered by Google Maps Directions & Gmail SMTP
+              </footer>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (() => {
+        const form = document.getElementById("travel-form");
+        const alertContainer = document.getElementById("alert-container");
+        const resultSection = document.getElementById("result-section");
+        const etaDisplay = document.getElementById("eta-display");
+        const etaMinutes = document.getElementById("eta-minutes");
+        const thresholdValue = document.getElementById("threshold-value");
+        const thresholdStatus = document.getElementById("threshold-status");
+        const lastUpdated = document.getElementById("last-updated");
+        const notificationStatus = document.getElementById("notification-status");
+        const busyIndicator = document.getElementById("busy-indicator");
+        const busyText = document.getElementById("busy-text");
+        const statusPlaceholder = document.getElementById("status-placeholder");
+
+        const endpoint = "{{ url_for('index') }}";
+        const autocompleteEndpoint = "{{ url_for('autocomplete') }}";
+        const pollIntervalMs = {{ config.refresh_interval_seconds * 1000 }};
+        const AUTOCOMPLETE_MIN_CHARS = 3;
+        const AUTOCOMPLETE_DEBOUNCE_MS = 300;
+
+        let pollTimer = null;
+        let notificationSent = false;
+
+        function clearAlert() {
+          alertContainer.innerHTML = "";
+        }
+
+        function showAlert(message, type = "info") {
+          alertContainer.innerHTML = `
+            <div class="alert alert-${type}" role="alert">
+              ${message}
+            </div>
+          `;
+        }
+
+        function setBusyIndicator(active, message) {
+          if (!busyIndicator) {
+            return;
+          }
+
+          if (message && busyText) {
+            busyText.textContent = message;
+          }
+
+          busyIndicator.classList.toggle("d-none", !active);
+        }
+
+        function stopPolling() {
+          if (pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+          }
+
+          setBusyIndicator(false);
+        }
+
+        function toggleStatusPlaceholder(show) {
+          if (!statusPlaceholder) {
+            return;
+          }
+
+          statusPlaceholder.classList.toggle("d-none", !show);
+        }
+
+        function updateResult(payload) {
+          const { result, should_alert, alert_sent } = payload;
+
+          toggleStatusPlaceholder(false);
+          resultSection.classList.remove("d-none");
+          etaDisplay.textContent = result.eta_display;
+          etaMinutes.textContent = `${result.minutes.toFixed(1)} minutes`;
+          thresholdValue.textContent = `${result.threshold} minutes`;
+
+          const waitingForDrop = !should_alert && !alert_sent;
+          thresholdStatus.textContent = should_alert
+            ? "Within alert threshold"
+            : "Monitoring traffic";
+          thresholdStatus.classList.add("status-pill");
+          thresholdStatus.classList.toggle("alert-ready", should_alert);
+          thresholdStatus.classList.toggle("waiting", waitingForDrop);
+
+          const now = new Date();
+          lastUpdated.textContent = now.toLocaleString();
+
+          if (alert_sent) {
+            notificationStatus.textContent = "Notification sent.";
+            notificationStatus.classList.remove("d-none");
+          }
+
+          setBusyIndicator(
+            waitingForDrop,
+            "We're keeping an eye on traffic until the ETA is below your alert threshold.",
+          );
+        }
+
+        function attachAutocomplete(inputId, menuId) {
+          const input = document.getElementById(inputId);
+          const menu = document.getElementById(menuId);
+          if (!input || !menu) {
+            return;
+          }
+
+          input.setAttribute("autocomplete", "off");
+          input.setAttribute("role", "combobox");
+
+          let debounceTimer;
+          let lastValue = "";
+          let options = [];
+          let activeIndex = -1;
+
+          const closeMenu = () => {
+            options = [];
+            activeIndex = -1;
+            menu.innerHTML = "";
+            menu.classList.add("d-none");
+            input.setAttribute("aria-expanded", "false");
+          };
+
+          const highlightActive = () => {
+            const children = Array.from(menu.children);
+            children.forEach((child, index) => {
+              child.classList.toggle("active", index === activeIndex);
+            });
+          };
+
+          const commitValue = (value) => {
+            input.value = value;
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+            closeMenu();
+          };
+
+          const renderOptions = (list) => {
+            options = list;
+            menu.innerHTML = "";
+
+            if (!list.length) {
+              closeMenu();
+              return;
+            }
+
+            list.forEach((option, index) => {
+              const button = document.createElement("button");
+              button.type = "button";
+              button.className = "autocomplete-option";
+              button.textContent = option;
+              button.setAttribute("role", "option");
+              button.addEventListener("mousedown", (event) => {
+                event.preventDefault();
+                commitValue(option);
+              });
+              menu.appendChild(button);
+            });
+
+            menu.classList.remove("d-none");
+            input.setAttribute("aria-expanded", "true");
+            activeIndex = -1;
+            highlightActive();
+          };
+
+          input.addEventListener("keydown", (event) => {
+            if (!options.length) {
+              return;
+            }
+
+            if (event.key === "ArrowDown") {
+              event.preventDefault();
+              activeIndex = (activeIndex + 1) % options.length;
+              highlightActive();
+            } else if (event.key === "ArrowUp") {
+              event.preventDefault();
+              activeIndex = (activeIndex - 1 + options.length) % options.length;
+              highlightActive();
+            } else if (event.key === "Enter") {
+              if (activeIndex >= 0 && activeIndex < options.length) {
+                event.preventDefault();
+                commitValue(options[activeIndex]);
+              }
+            } else if (event.key === "Escape") {
+              event.preventDefault();
+              closeMenu();
+            }
+          });
+
+          document.addEventListener("click", (event) => {
+            if (event.target === input || menu.contains(event.target)) {
+              return;
+            }
+            closeMenu();
+          });
+
+          input.addEventListener("input", () => {
+            const query = input.value.trim();
+
+            if (query.length < AUTOCOMPLETE_MIN_CHARS) {
+              closeMenu();
+              lastValue = "";
+              return;
+            }
+
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(async () => {
+              if (!query || query === lastValue) {
+                return;
+              }
+
+              lastValue = query;
+
+              try {
+                const response = await fetch(
+                  `${autocompleteEndpoint}?q=${encodeURIComponent(query)}`,
+                );
+                const data = await response.json();
+
+                if (!response.ok || !data.ok) {
+                  throw new Error(data.error || "Failed to load suggestions");
+                }
+
+                renderOptions(data.predictions || []);
+              } catch (error) {
+                console.warn("Autocomplete failed", error);
+                closeMenu();
+              }
+            }, AUTOCOMPLETE_DEBOUNCE_MS);
+          });
+        }
+
+        async function fetchTravelTime() {
+          const formData = new FormData(form);
+          const payload = {
+            origin: (formData.get("origin") || "").trim(),
+            destination: (formData.get("destination") || "").trim(),
+            email: (formData.get("email") || "").trim(),
+            threshold: formData.get("threshold") || "",
+            notify: formData.get("notify") === "1" || formData.get("notify") === "on",
+            notificationSent,
+          };
+
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json",
+            },
+            body: JSON.stringify(payload),
+          });
+
+          const data = await response.json().catch(() => ({ ok: false }));
+
+          if (!response.ok || !data.ok) {
+            const message = data && data.error ? data.error : "Failed to retrieve travel time.";
+            throw new Error(message);
+          }
+
+          updateResult(data);
+
+          if (data.alert_sent) {
+            notificationSent = true;
+            stopPolling();
+          } else if (data.should_alert) {
+            stopPolling();
+          } else {
+            setBusyIndicator(true);
+          }
+
+          return data;
+        }
+
+        async function startPolling() {
+          clearAlert();
+          notificationStatus.classList.add("d-none");
+          notificationSent = false;
+
+          try {
+            const initial = await fetchTravelTime();
+
+            if (!initial.should_alert) {
+              pollTimer = setInterval(async () => {
+                try {
+                  await fetchTravelTime();
+                } catch (error) {
+                  showAlert(error.message, "danger");
+                  stopPolling();
+                }
+              }, pollIntervalMs);
+            }
+          } catch (error) {
+            showAlert(error.message, "danger");
+          }
+        }
+
+        attachAutocomplete("origin", "origin-suggestions");
+        attachAutocomplete("destination", "destination-suggestions");
+
+        form.addEventListener("submit", (event) => {
+          event.preventDefault();
+          stopPolling();
+          setBusyIndicator(true, "Fetching the latest travel time...");
+          startPolling();
+        });
+      })();
+    </script>
+  </body>
+</html>
