@@ -24,15 +24,6 @@ class EmailDeliveryError(TrafficAlertError):
 def get_travel_time(api_key: str, origin: str, destination: str) -> float:
     """Return the estimated travel time in minutes between two addresses.
 
-    Parameters
-    ----------
-    api_key:
-        Google Maps Directions API key.
-    origin:
-        Starting address or place description.
-    destination:
-        Destination address or place description.
-
     Raises
     ------
     TravelTimeError
@@ -47,15 +38,38 @@ def get_travel_time(api_key: str, origin: str, destination: str) -> float:
         "key": api_key,
     }
 
-    response = requests.get(url, params=params, timeout=10)
-    data = response.json()
+    try:
+        response = requests.get(url, params=params, timeout=10)
+    except requests.RequestException as exc:
+        raise TravelTimeError("Unable to contact the Google Directions API") from exc
+
+    if response.status_code != 200:
+        raise TravelTimeError(
+            f"Directions API request failed with HTTP {response.status_code}"
+        )
 
     try:
-        duration = data["routes"][0]["legs"][0]["duration_in_traffic"]["value"]
-    except (KeyError, IndexError) as exc:
-        raise TravelTimeError("Failed to parse travel time from API response") from exc
+        data = response.json()
+    except ValueError as exc:
+        raise TravelTimeError("Directions API returned an unreadable response") from exc
 
-    return duration / 60.0
+    status = data.get("status", "UNKNOWN")
+    if status != "OK":
+        if status == "ZERO_RESULTS":
+            raise TravelTimeError("No route found between the selected locations.")
+        message = data.get("error_message") or f"Directions API error: {status}"
+        raise TravelTimeError(message)
+
+    try:
+        leg = data["routes"][0]["legs"][0]
+    except (KeyError, IndexError) as exc:
+        raise TravelTimeError("Directions API response was missing route data") from exc
+
+    duration_block = leg.get("duration_in_traffic") or leg.get("duration")
+    if not duration_block or "value" not in duration_block:
+        raise TravelTimeError("Directions API did not include a travel time.")
+
+    return duration_block["value"] / 60.0
 
 
 def format_eta(minutes: float) -> str:
