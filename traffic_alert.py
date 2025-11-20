@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 import os
-import smtplib
-from email.mime.text import MIMEText
 from typing import Optional
 
 import requests
@@ -87,26 +85,44 @@ def format_eta(minutes: float) -> str:
 def send_email_alert(
     *,
     email_from: str,
-    email_password: str,
+    email_api_key: str,
+    email_api_url: str,
     email_to: str,
     subject: str,
     body: str,
-    smtp_server: str = "smtp.gmail.com",
-    smtp_port: int = 465,
 ) -> None:
-    """Send an email alert describing the current commute time."""
+    """Send an email alert describing the current commute time via HTTPS."""
 
-    msg = MIMEText(body)
-    msg["Subject"] = subject
-    msg["From"] = email_from
-    msg["To"] = email_to
+    if not email_api_url.lower().startswith("https://"):
+        raise EmailDeliveryError("Email API URL must use HTTPS")
+
+    payload = {
+        "from": email_from,
+        "to": email_to,
+        "subject": subject,
+        "text": body,
+    }
+    headers = {
+        "Authorization": f"Bearer {email_api_key}",
+        "Content-Type": "application/json",
+    }
 
     try:
-        with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
-            server.login(email_from, email_password)
-            server.send_message(msg)
-    except Exception as exc:  # pragma: no cover - network failure is unrecoverable in tests
-        raise EmailDeliveryError("Failed to send email alert") from exc
+        response = requests.post(email_api_url, json=payload, headers=headers, timeout=10)
+    except requests.RequestException as exc:  # pragma: no cover - network failure is unrecoverable in tests
+        raise EmailDeliveryError("Failed to reach the email API") from exc
+
+    if response.status_code >= 400:
+        try:
+            data = response.json()
+            error_detail = data.get("error") or data.get("message")
+        except ValueError:
+            error_detail = response.text.strip()
+
+        message = "Email API rejected the request"
+        if error_detail:
+            message = f"{message}: {error_detail}"
+        raise EmailDeliveryError(message)
 
 
 def resolve_env(name: str) -> Optional[str]:

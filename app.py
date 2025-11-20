@@ -16,7 +16,8 @@ from traffic_alert import EmailDeliveryError, TravelTimeError, format_eta, get_t
 class AppConfig:
     google_maps_api_key: Optional[str]
     email_from: Optional[str]
-    email_password: Optional[str]
+    email_api_key: Optional[str]
+    email_api_url: Optional[str]
     email_subject: str
     alert_threshold_minutes: int
     refresh_interval_seconds: int
@@ -26,7 +27,8 @@ class AppConfig:
 def load_config() -> AppConfig:
     api_key = os.getenv("GOOGLE_MAPS_API_KEY")
     email_from = os.getenv("EMAIL_FROM")
-    email_password = os.getenv("EMAIL_APP_PASSWORD")
+    email_api_key = os.getenv("EMAIL_API_KEY")
+    email_api_url = os.getenv("EMAIL_API_URL")
     email_subject = os.getenv("EMAIL_SUBJECT", "🚦 Traffic Alert")
 
     try:
@@ -48,7 +50,8 @@ def load_config() -> AppConfig:
     return AppConfig(
         google_maps_api_key=api_key,
         email_from=email_from,
-        email_password=email_password,
+        email_api_key=email_api_key,
+        email_api_url=email_api_url,
         email_subject=email_subject,
         alert_threshold_minutes=threshold,
         refresh_interval_seconds=refresh_seconds,
@@ -117,14 +120,15 @@ def create_app() -> Flask:
 
             if notify and should_alert and not notification_sent:
                 email_from = config.email_from
-                email_password = config.email_password
+                email_api_key = config.email_api_key
+                email_api_url = config.email_api_url
 
-                if not email_from or not email_password:
+                if not email_from or not email_api_key or not email_api_url:
                     return (
                         jsonify(
                             {
                                 "ok": False,
-                                "error": "Email credentials missing. Set EMAIL_FROM and EMAIL_APP_PASSWORD.",
+                                "error": "Email settings missing. Set EMAIL_FROM, EMAIL_API_URL, and EMAIL_API_KEY.",
                             }
                         ),
                         400,
@@ -138,7 +142,8 @@ def create_app() -> Flask:
                 try:
                     send_email_alert(
                         email_from=email_from,
-                        email_password=email_password,
+                        email_api_key=email_api_key,
+                        email_api_url=email_api_url,
                         email_to=email_to,
                         subject=config.email_subject,
                         body=body,
@@ -209,11 +214,12 @@ def create_app() -> Flask:
 
             if notify and should_alert:
                 email_from = config.email_from
-                email_password = config.email_password
+                email_api_key = config.email_api_key
+                email_api_url = config.email_api_url
 
-                if not email_from or not email_password:
+                if not email_from or not email_api_key or not email_api_url:
                     flash(
-                        "Email credentials are missing. Set EMAIL_FROM and EMAIL_APP_PASSWORD in the environment.",
+                        "Email settings are missing. Set EMAIL_FROM, EMAIL_API_URL, and EMAIL_API_KEY in the environment.",
                         "error",
                     )
                 else:
@@ -224,7 +230,8 @@ def create_app() -> Flask:
                     try:
                         send_email_alert(
                             email_from=email_from,
-                            email_password=email_password,
+                            email_api_key=email_api_key,
+                            email_api_url=email_api_url,
                             email_to=email_to,
                             subject=config.email_subject,
                             body=body,
