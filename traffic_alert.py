@@ -1,7 +1,9 @@
 """Utility functions for retrieving travel-time estimates and sending alerts."""
 from __future__ import annotations
 
+import base64
 import os
+from email.mime.text import MIMEText
 from typing import Optional
 
 import requests
@@ -82,35 +84,128 @@ def format_eta(minutes: float) -> str:
     return f"{mins} min"
 
 
+def refresh_access_token(
+    *,
+    refresh_token: str,
+    client_id: str,
+    client_secret: str,
+    token_url: str = "https://oauth2.googleapis.com/token",
+) -> str:
+    """Exchange a refresh token for a short-lived access token."""
+
+    if not token_url.lower().startswith("https://"):
+        raise EmailDeliveryError("OAuth token URL must use HTTPS")
+
+    payload = {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "refresh_token": refresh_token,
+        "grant_type": "refresh_token",
+    }
+
+    try:
+        response = requests.post(token_url, data=payload, timeout=10)
+    except requests.RequestException as exc:
+        raise EmailDeliveryError("Failed to refresh email access token") from exc
+
+    if response.status_code != 200:
+        try:
+            data = response.json()
+            error_detail = data.get("error_description") or data.get("error")
+        except ValueError:
+            error_detail = response.text.strip()
+
+        message = "Unable to refresh email access token"
+        if error_detail:
+            message = f"{message}: {error_detail}"
+        raise EmailDeliveryError(message)
+
+    try:
+        data = response.json()
+    except ValueError as exc:
+        raise EmailDeliveryError("Token endpoint returned invalid JSON") from exc
+
+    access_token = data.get("access_token")
+    if not access_token:
+        raise EmailDeliveryError("Token endpoint response was missing an access_token")
+
+    return access_token
+
+
 def send_email_alert(
     *,
     email_from: str,
-    email_api_key: str,
+    email_api_key: Optional[str],
     email_api_url: str,
     email_to: str,
     subject: str,
     body: str,
+    email_refresh_token: Optional[str] = None,
+    oauth_client_id: Optional[str] = None,
+    oauth_client_secret: Optional[str] = None,
+    oauth_token_url: str = "https://oauth2.googleapis.com/token",
 ) -> None:
     """Send an email alert describing the current commute time via HTTPS."""
 
     if not email_api_url.lower().startswith("https://"):
         raise EmailDeliveryError("Email API URL must use HTTPS")
 
-    payload = {
-        "from": email_from,
-        "to": email_to,
-        "subject": subject,
-        "text": body,
-    }
-    headers = {
-        "Authorization": f"Bearer {email_api_key}",
-        "Content-Type": "application/json",
-    }
+    refresh_available = all([email_refresh_token, oauth_client_id, oauth_client_secret])
+    token_used = email_api_key
+
+    if not token_used and refresh_available:
+        token_used = refresh_access_token(
+            refresh_token=email_refresh_token or "",
+            client_id=oauth_client_id or "",
+            client_secret=oauth_client_secret or "",
+            token_url=oauth_token_url,
+        )
+    elif not token_used:
+        raise EmailDeliveryError("Email API key missing and no refresh token available")
+
+    if "gmail.googleapis.com" in email_api_url:
+        message = MIMEText(body)
+        message["to"] = email_to
+        message["from"] = email_from
+        message["subject"] = subject
+
+        payload = {"raw": base64.urlsafe_b64encode(message.as_bytes()).decode()}
+    else:
+        payload = {
+            "from": email_from,
+            "to": email_to,
+            "subject": subject,
+            "text": body,
+        }
+
+    def _deliver(access_token: str) -> requests.Response:
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+        }
+
+        return requests.post(email_api_url, json=payload, headers=headers, timeout=10)
 
     try:
-        response = requests.post(email_api_url, json=payload, headers=headers, timeout=10)
+        response = _deliver(token_used)
     except requests.RequestException as exc:  # pragma: no cover - network failure is unrecoverable in tests
         raise EmailDeliveryError("Failed to reach the email API") from exc
+
+    if response.status_code == 401 and refresh_available:
+        try:
+            refreshed_token = refresh_access_token(
+                refresh_token=email_refresh_token or "",
+                client_id=oauth_client_id or "",
+                client_secret=oauth_client_secret or "",
+                token_url=oauth_token_url,
+            )
+        except EmailDeliveryError:
+            pass
+        else:
+            try:
+                response = _deliver(refreshed_token)
+            except requests.RequestException as exc:  # pragma: no cover
+                raise EmailDeliveryError("Failed to reach the email API") from exc
 
     if response.status_code >= 400:
         try:

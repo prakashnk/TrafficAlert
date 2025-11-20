@@ -19,6 +19,10 @@ class AppConfig:
     email_api_key: Optional[str]
     email_api_url: Optional[str]
     email_subject: str
+    email_refresh_token: Optional[str]
+    email_oauth_client_id: Optional[str]
+    email_oauth_client_secret: Optional[str]
+    email_oauth_token_url: str
     alert_threshold_minutes: int
     refresh_interval_seconds: int
     asset_version: str
@@ -30,6 +34,12 @@ def load_config() -> AppConfig:
     email_api_key = os.getenv("EMAIL_API_KEY")
     email_api_url = os.getenv("EMAIL_API_URL")
     email_subject = os.getenv("EMAIL_SUBJECT", "🚦 Traffic Alert")
+    email_refresh_token = os.getenv("EMAIL_OAUTH_REFRESH_TOKEN")
+    email_oauth_client_id = os.getenv("EMAIL_OAUTH_CLIENT_ID")
+    email_oauth_client_secret = os.getenv("EMAIL_OAUTH_CLIENT_SECRET")
+    email_oauth_token_url = os.getenv(
+        "EMAIL_OAUTH_TOKEN_URL", "https://oauth2.googleapis.com/token"
+    )
 
     try:
         threshold = int(os.getenv("ALERT_THRESHOLD_MINUTES", "120"))
@@ -53,6 +63,10 @@ def load_config() -> AppConfig:
         email_api_key=email_api_key,
         email_api_url=email_api_url,
         email_subject=email_subject,
+        email_refresh_token=email_refresh_token,
+        email_oauth_client_id=email_oauth_client_id,
+        email_oauth_client_secret=email_oauth_client_secret,
+        email_oauth_token_url=email_oauth_token_url,
         alert_threshold_minutes=threshold,
         refresh_interval_seconds=refresh_seconds,
         asset_version=asset_version,
@@ -122,13 +136,31 @@ def create_app() -> Flask:
                 email_from = config.email_from
                 email_api_key = config.email_api_key
                 email_api_url = config.email_api_url
+                refresh_ready = all(
+                    [
+                        config.email_refresh_token,
+                        config.email_oauth_client_id,
+                        config.email_oauth_client_secret,
+                    ]
+                )
 
-                if not email_from or not email_api_key or not email_api_url:
+                if not email_from or not email_api_url:
                     return (
                         jsonify(
                             {
                                 "ok": False,
-                                "error": "Email settings missing. Set EMAIL_FROM, EMAIL_API_URL, and EMAIL_API_KEY.",
+                                "error": "Email settings missing. Set EMAIL_FROM and EMAIL_API_URL.",
+                            }
+                        ),
+                        400,
+                    )
+
+                if not (email_api_key or refresh_ready):
+                    return (
+                        jsonify(
+                            {
+                                "ok": False,
+                                "error": "Provide EMAIL_API_KEY or a refresh token plus client credentials.",
                             }
                         ),
                         400,
@@ -147,6 +179,10 @@ def create_app() -> Flask:
                         email_to=email_to,
                         subject=config.email_subject,
                         body=body,
+                        email_refresh_token=config.email_refresh_token,
+                        oauth_client_id=config.email_oauth_client_id,
+                        oauth_client_secret=config.email_oauth_client_secret,
+                        oauth_token_url=config.email_oauth_token_url,
                     )
                 except EmailDeliveryError as exc:
                     return jsonify({"ok": False, "error": str(exc)}), 502
@@ -216,10 +252,22 @@ def create_app() -> Flask:
                 email_from = config.email_from
                 email_api_key = config.email_api_key
                 email_api_url = config.email_api_url
+                refresh_ready = all(
+                    [
+                        config.email_refresh_token,
+                        config.email_oauth_client_id,
+                        config.email_oauth_client_secret,
+                    ]
+                )
 
-                if not email_from or not email_api_key or not email_api_url:
+                if not email_from or not email_api_url:
                     flash(
-                        "Email settings are missing. Set EMAIL_FROM, EMAIL_API_URL, and EMAIL_API_KEY in the environment.",
+                        "Email settings are missing. Set EMAIL_FROM and EMAIL_API_URL in the environment.",
+                        "error",
+                    )
+                elif not (email_api_key or refresh_ready):
+                    flash(
+                        "Email credentials are missing. Provide EMAIL_API_KEY or a refresh token with client credentials.",
                         "error",
                     )
                 else:
@@ -235,6 +283,10 @@ def create_app() -> Flask:
                             email_to=email_to,
                             subject=config.email_subject,
                             body=body,
+                            email_refresh_token=config.email_refresh_token,
+                            oauth_client_id=config.email_oauth_client_id,
+                            oauth_client_secret=config.email_oauth_client_secret,
+                            oauth_token_url=config.email_oauth_token_url,
                         )
                         flash(f"Email alert sent to {email_to}.", "success")
                     except EmailDeliveryError as exc:
