@@ -57,9 +57,14 @@ If you want to send alerts through Gmail:
 
 - Set `EMAIL_API_URL` to `https://gmail.googleapis.com/gmail/v1/users/me/messages/send`.
 - Use an OAuth 2.0 access token with Gmail send scope as `EMAIL_API_KEY`.
+- Provide your refresh token and OAuth client credentials to keep the access token fresh:
+  - `EMAIL_OAUTH_REFRESH_TOKEN`
+  - `EMAIL_OAUTH_CLIENT_ID`
+  - `EMAIL_OAUTH_CLIENT_SECRET`
+- Optionally override `EMAIL_OAUTH_TOKEN_URL` if you are using a non-Google OAuth provider (defaults to `https://oauth2.googleapis.com/token`).
 - Set `EMAIL_FROM` to the Gmail address associated with the token.
 
-When the Gmail endpoint is detected, the app automatically builds the raw MIME payload that the Gmail API expects and sends it over HTTPS. For other providers, it falls back to the generic JSON payload with `from`, `to`, `subject`, and `text` fields.
+When the Gmail endpoint is detected, the app automatically builds the raw MIME payload that the Gmail API expects and sends it over HTTPS. If a refresh token and client credentials are provided, the app will exchange them for a new access token when needed. For other providers, it falls back to the generic JSON payload with `from`, `to`, `subject`, and `text` fields.
 
 ### Refreshing the Modern theme
 
