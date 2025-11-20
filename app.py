@@ -329,6 +329,65 @@ def create_app() -> Flask:
         message = fallback_error or error_message or "Unable to fetch address suggestions."
         return jsonify({"ok": False, "error": message}), 200
 
+    @app.route("/reverse_geocode")
+    def reverse_geocode():
+        config: AppConfig = app.config_obj
+        lat = request.args.get("lat")
+        lng = request.args.get("lng")
+
+        if not lat or not lng:
+            return jsonify({"ok": False, "error": "Latitude and longitude are required."}), 400
+
+        try:
+            lat_val = float(lat)
+            lng_val = float(lng)
+        except ValueError:
+            return jsonify({"ok": False, "error": "Invalid coordinates provided."}), 400
+
+        api_key = config.google_maps_api_key
+        if not api_key:
+            return (
+                jsonify(
+                    {
+                        "ok": False,
+                        "error": "Google Maps API key missing. Set GOOGLE_MAPS_API_KEY.",
+                    }
+                ),
+                400,
+            )
+
+        params = {"latlng": f"{lat_val},{lng_val}", "key": api_key}
+
+        try:
+            response = requests.get(
+                "https://maps.googleapis.com/maps/api/geocode/json",
+                params=params,
+                timeout=5,
+            )
+            data = response.json()
+        except requests.RequestException as exc:
+            return (
+                jsonify({"ok": False, "error": f"Failed to contact Geocoding API: {exc}"}),
+                502,
+            )
+        except ValueError:
+            return jsonify({"ok": False, "error": "Geocoding API returned invalid data."}), 502
+
+        status = data.get("status", "UNKNOWN")
+        if status not in {"OK", "ZERO_RESULTS"}:
+            message = data.get("error_message") or f"Geocoding API error: {status}"
+            return jsonify({"ok": False, "error": message}), 200
+
+        results = data.get("results", [])
+        if not results:
+            return jsonify({"ok": False, "error": "No address found for your location."}), 200
+
+        address = results[0].get("formatted_address")
+        if not address:
+            return jsonify({"ok": False, "error": "Unable to determine your address."}), 200
+
+        return jsonify({"ok": True, "address": address})
+
     return app
 
 
