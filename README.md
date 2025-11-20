@@ -6,7 +6,7 @@ A minimal Flask application that checks the current travel time between two addr
 
 - Python 3.10+
 - Google Maps Directions API key (the Places API is recommended for richer autocomplete suggestions, but the app now falls back to the Geocoding API when Places isn't enabled)
-- Gmail account with an [App Password](https://support.google.com/accounts/answer/185833) (required only if you enable email notifications)
+- HTTPS-capable email API endpoint and API key (required only if you enable email notifications)
 
 ## Setup
 
@@ -47,6 +47,10 @@ python app.py
 
 Open a browser and navigate to [http://127.0.0.1:5000](http://127.0.0.1:5000). Fill in the origin, destination, and (optionally) enable email notifications to receive alerts when the travel time drops below the specified threshold.
 
+### Configuring the email API
+
+Set `EMAIL_API_URL` to the HTTPS endpoint that accepts a JSON payload with `from`, `to`, `subject`, and `text` fields. Provide the API key used to authorize requests in `EMAIL_API_KEY`; it is passed as a Bearer token. The `EMAIL_FROM` value is forwarded to the API to populate the sender field.
+
 ### Refreshing the Modern theme
 
 The UI ships with a custom Modern skin that lives in `static/css/modern.css`. Browsers can occasionally cache that file aggressively. If you pull the latest code but still see the older styling, edit your `.env` file and set `ASSET_VERSION` to any unique value. Restart the Flask server and reload the page—the query parameter automatically appended to the stylesheet URL will force the browser to fetch the updated CSS.
@@ -56,7 +60,7 @@ The UI ships with a custom Modern skin that lives in `static/css/modern.css`. Br
 - The form submits the origin and destination addresses.
 - The application queries the Google Maps Directions API for real-time traffic information and displays the ETA in a friendly format.
 - Address suggestions come from the Google Places Autocomplete API when available, and automatically fall back to the Geocoding API when Places access is not configured for your key.
-- If notifications are enabled and the travel time is below the configured threshold, an email alert is sent using the Gmail SMTP server.
+- If notifications are enabled and the travel time is below the configured threshold, an email alert is sent through the configured HTTPS email API endpoint.
 
 ## Development notes
 

@@ -1,22 +1,25 @@
 :root {
-  --modern-bg-start: #050915;
-  --modern-bg-end: #0f172a;
-  --modern-card-bg: rgba(15, 23, 42, 0.9);
-  --modern-card-border: rgba(255, 255, 255, 0.06);
-  --modern-text: #f8fafc;
-  --modern-muted: #94a3b8;
-  --modern-accent: #38bdf8;
-  --modern-accent-strong: #0ea5e9;
-  --modern-success: #34d399;
-  --modern-danger: #fb7185;
+  --modern-bg-start: #f7f9fc;
+  --modern-bg-end: #eef2f7;
+  --modern-card-bg: rgba(255, 255, 255, 0.9);
+  --modern-card-border: rgba(15, 23, 42, 0.08);
+  --modern-text: #0f172a;
+  --modern-muted: #64748b;
+  --modern-accent: #f97316;
+  --modern-accent-strong: #ea580c;
+  --modern-success: #16a34a;
+  --modern-danger: #ef4444;
 }
 
 body.theme-modern {
   min-height: 100vh;
   font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-  background: radial-gradient(circle at 15% 20%, rgba(56, 189, 248, 0.2), transparent 45%),
-    radial-gradient(circle at 85% 10%, rgba(249, 115, 22, 0.15), transparent 40%),
-    linear-gradient(135deg, var(--modern-bg-start), var(--modern-bg-end));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(247, 248, 252, 0.9) 40%, rgba(238, 242, 247, 0.92) 100%),
+    linear-gradient(135deg, rgba(255, 214, 102, 0.35), rgba(255, 159, 28, 0.18), rgba(15, 118, 228, 0.1)),
+    url('https://media.istockphoto.com/id/493830466/photo/san-francisco-oakland-bay-bridge-with-rush-hour-traffic.jpg?s=612x612&w=0&k=20&c=Dcs1MTt8RHz5pKUKDzoM_g1V_1-mj8iwIuvW_1gI8X8=');
+  background-size: cover;
+  background-position: center top;
+  background-attachment: fixed;
   color: var(--modern-text);
 }
 
@@ -28,8 +31,8 @@ body.theme-modern {
   border: 1px solid var(--modern-card-border);
   border-radius: 1.5rem;
   background: var(--modern-card-bg);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 25px 60px rgba(2, 6, 23, 0.55);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.12);
   color: var(--modern-text);
 }
 
@@ -47,16 +50,16 @@ body.theme-modern {
 
 .theme-modern .modern-card .form-control,
 .theme-modern .modern-card .form-select {
-  background-color: rgba(15, 23, 42, 0.65);
-  border: 1px solid rgba(148, 163, 184, 0.3);
+  background-color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(15, 23, 42, 0.12);
   color: var(--modern-text);
 }
 
 .theme-modern .modern-card .form-control:focus,
 .theme-modern .modern-card .form-select:focus {
   border-color: var(--modern-accent);
-  box-shadow: 0 0 0 0.2rem rgba(14, 165, 233, 0.25);
-  background-color: rgba(15, 23, 42, 0.8);
+  box-shadow: 0 0 0 0.2rem rgba(249, 115, 22, 0.18);
+  background-color: #ffffff;
 }
 
 .theme-modern .autocomplete-wrapper {
@@ -68,13 +71,13 @@ body.theme-modern {
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: rgba(15, 23, 42, 0.95);
-  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.12);
   border-radius: 0.85rem;
   max-height: 240px;
   overflow-y: auto;
   z-index: 20;
-  box-shadow: 0 15px 30px rgba(2, 6, 23, 0.55);
+  box-shadow: 0 15px 30px rgba(15, 23, 42, 0.12);
 }
 
 .theme-modern .autocomplete-menu.d-none {
@@ -94,25 +97,25 @@ body.theme-modern {
 
 .theme-modern .autocomplete-option:hover,
 .theme-modern .autocomplete-option.active {
-  background: rgba(56, 189, 248, 0.18);
+  background: rgba(249, 115, 22, 0.12);
   color: var(--modern-text);
 }
 
 .theme-modern .modern-card .form-switch .form-check-input {
-  background-color: rgba(15, 23, 42, 0.5);
-  border-color: rgba(148, 163, 184, 0.4);
+  background-color: rgba(15, 23, 42, 0.08);
+  border-color: rgba(15, 23, 42, 0.18);
 }
 
 .theme-modern .modern-status-panel {
-  background: rgba(15, 23, 42, 0.65);
-  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 1.5rem;
   padding: 1.75rem;
   min-height: 100%;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  box-shadow: 0 15px 30px rgba(15, 23, 42, 0.08);
 }
 
 .theme-modern .modern-status-panel .status-meta {
@@ -124,8 +127,8 @@ body.theme-modern {
 .theme-modern .modern-status-panel .status-placeholder {
   padding: 1.25rem;
   border-radius: 1.25rem;
-  border: 1px dashed rgba(148, 163, 184, 0.35);
-  background: rgba(15, 23, 42, 0.35);
+  border: 1px dashed rgba(15, 23, 42, 0.15);
+  background: rgba(255, 255, 255, 0.65);
   color: var(--modern-muted);
 }
 
@@ -134,16 +137,17 @@ body.theme-modern {
 }
 
 .theme-modern .btn-modern-primary {
-  background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
+  background: linear-gradient(135deg, #fbbf24, #f97316, #fb923c);
   border: none;
   font-weight: 600;
   letter-spacing: 0.02em;
-  box-shadow: 0 15px 30px rgba(99, 102, 241, 0.35);
+  color: #0f172a;
+  box-shadow: 0 15px 30px rgba(249, 115, 22, 0.25);
 }
 
 .theme-modern .btn-modern-primary:hover,
 .theme-modern .btn-modern-primary:focus {
-  background: linear-gradient(135deg, #818cf8, #c084fc, #f472b6);
+  background: linear-gradient(135deg, #fcd34d, #fb923c, #fdba74);
 }
 
 .theme-modern .text-accent {
@@ -151,23 +155,23 @@ body.theme-modern {
 }
 
 .theme-modern .badge-modern {
-  background-color: rgba(56, 189, 248, 0.12);
-  color: var(--modern-accent);
-  border: 1px solid rgba(56, 189, 248, 0.4);
+  background-color: rgba(249, 115, 22, 0.12);
+  color: var(--modern-accent-strong);
+  border: 1px solid rgba(249, 115, 22, 0.3);
   font-weight: 600;
   letter-spacing: 0.02em;
 }
 
 .theme-modern .badge-muted {
-  background-color: rgba(148, 163, 184, 0.1);
+  background-color: rgba(148, 163, 184, 0.15);
   color: var(--modern-muted);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border: 1px solid rgba(148, 163, 184, 0.25);
 }
 
 .theme-modern .modern-divider {
   width: 100%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.4), transparent);
+  background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.35), transparent);
   margin: 2rem 0;
 }
 
@@ -176,9 +180,9 @@ body.theme-modern {
   align-items: center;
   gap: 1rem;
   padding: 1rem 1.25rem;
-  background: rgba(14, 165, 233, 0.1);
+  background: rgba(249, 115, 22, 0.08);
   border-radius: 1rem;
-  border: 1px solid rgba(56, 189, 248, 0.25);
+  border: 1px solid rgba(249, 115, 22, 0.2);
 }
 
 .theme-modern #result-section .status-pill {
@@ -191,20 +195,20 @@ body.theme-modern {
 }
 
 .theme-modern #result-section .status-pill.alert-ready {
-  background-color: rgba(52, 211, 153, 0.15);
+  background-color: rgba(22, 163, 74, 0.12);
   color: var(--modern-success);
-  border: 1px solid rgba(52, 211, 153, 0.3);
+  border: 1px solid rgba(22, 163, 74, 0.25);
 }
 
 .theme-modern #result-section .status-pill.waiting {
-  background-color: rgba(248, 113, 113, 0.12);
+  background-color: rgba(239, 68, 68, 0.12);
   color: var(--modern-danger);
-  border: 1px solid rgba(248, 113, 113, 0.25);
+  border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
 .theme-modern #alert-container .alert {
   border-radius: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .theme-modern #eta-display {
