@@ -51,6 +51,13 @@ Open a browser and navigate to [http://127.0.0.1:5000](http://127.0.0.1:5000). F
 
 Set `EMAIL_API_URL` to the HTTPS endpoint that accepts a JSON payload with `from`, `to`, `subject`, and `text` fields. Provide the API key used to authorize requests in `EMAIL_API_KEY`; it is passed as a Bearer token. The `EMAIL_FROM` value is forwarded to the API to populate the sender field.
 
+If you are unsure where to obtain the URL and API key:
+
+- Sign in to your email provider (e.g., Postmark, SendGrid, Mailgun) and create a REST/HTTP sending credential.
+- Copy the provider's send-message endpoint into `EMAIL_API_URL` (it typically looks like `https://api.yourprovider.com/v3/.../messages`).
+- Copy the generated token into `EMAIL_API_KEY` and keep it secret. The app will place it in the `Authorization: Bearer <token>` header for you.
+- Use your verified sender address in `EMAIL_FROM` so the provider accepts the request.
+
 ### Refreshing the Modern theme
 
 The UI ships with a custom Modern skin that lives in `static/css/modern.css`. Browsers can occasionally cache that file aggressively. If you pull the latest code but still see the older styling, edit your `.env` file and set `ASSET_VERSION` to any unique value. Restart the Flask server and reload the page—the query parameter automatically appended to the stylesheet URL will force the browser to fetch the updated CSS.
