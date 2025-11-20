@@ -1,7 +1,9 @@
 """Utility functions for retrieving travel-time estimates and sending alerts."""
 from __future__ import annotations
 
+import base64
 import os
+from email.mime.text import MIMEText
 from typing import Optional
 
 import requests
@@ -96,12 +98,20 @@ def send_email_alert(
     if not email_api_url.lower().startswith("https://"):
         raise EmailDeliveryError("Email API URL must use HTTPS")
 
-    payload = {
-        "from": email_from,
-        "to": email_to,
-        "subject": subject,
-        "text": body,
-    }
+    if "gmail.googleapis.com" in email_api_url:
+        message = MIMEText(body)
+        message["to"] = email_to
+        message["from"] = email_from
+        message["subject"] = subject
+
+        payload = {"raw": base64.urlsafe_b64encode(message.as_bytes()).decode()}
+    else:
+        payload = {
+            "from": email_from,
+            "to": email_to,
+            "subject": subject,
+            "text": body,
+        }
     headers = {
         "Authorization": f"Bearer {email_api_key}",
         "Content-Type": "application/json",
