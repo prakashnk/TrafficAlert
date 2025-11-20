@@ -49,14 +49,17 @@ Open a browser and navigate to [http://127.0.0.1:5000](http://127.0.0.1:5000). F
 
 ### Configuring the email API
 
-Set `EMAIL_API_URL` to the HTTPS endpoint that accepts a JSON payload with `from`, `to`, `subject`, and `text` fields. Provide the API key used to authorize requests in `EMAIL_API_KEY`; it is passed as a Bearer token. The `EMAIL_FROM` value is forwarded to the API to populate the sender field.
+Set `EMAIL_API_URL` to the HTTPS endpoint used for sending messages and `EMAIL_API_KEY` to the Bearer token used to authorize requests. The `EMAIL_FROM` value populates the sender field.
 
-If you are unsure where to obtain the URL and API key:
+#### Using Gmail
 
-- Sign in to your email provider (e.g., Postmark, SendGrid, Mailgun) and create a REST/HTTP sending credential.
-- Copy the provider's send-message endpoint into `EMAIL_API_URL` (it typically looks like `https://api.yourprovider.com/v3/.../messages`).
-- Copy the generated token into `EMAIL_API_KEY` and keep it secret. The app will place it in the `Authorization: Bearer <token>` header for you.
-- Use your verified sender address in `EMAIL_FROM` so the provider accepts the request.
+If you want to send alerts through Gmail:
+
+- Set `EMAIL_API_URL` to `https://gmail.googleapis.com/gmail/v1/users/me/messages/send`.
+- Use an OAuth 2.0 access token with Gmail send scope as `EMAIL_API_KEY`.
+- Set `EMAIL_FROM` to the Gmail address associated with the token.
+
+When the Gmail endpoint is detected, the app automatically builds the raw MIME payload that the Gmail API expects and sends it over HTTPS. For other providers, it falls back to the generic JSON payload with `from`, `to`, `subject`, and `text` fields.
 
 ### Refreshing the Modern theme
 
