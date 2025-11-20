@@ -14,12 +14,14 @@
 body.theme-modern {
   min-height: 100vh;
   font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(247, 248, 252, 0.9) 40%, rgba(238, 242, 247, 0.92) 100%),
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(247, 248, 252, 0.9) 40%, rgba(238, 242, 247, 0.92) 100%),
     linear-gradient(135deg, rgba(255, 214, 102, 0.35), rgba(255, 159, 28, 0.18), rgba(15, 118, 228, 0.1)),
-    url('https://media.istockphoto.com/id/493830466/photo/san-francisco-oakland-bay-bridge-with-rush-hour-traffic.jpg?s=612x612&w=0&k=20&c=Dcs1MTt8RHz5pKUKDzoM_g1V_1-mj8iwIuvW_1gI8X8=');
+    url('../img/bay-bridge-light.svg');
   background-size: cover;
+  background-repeat: no-repeat;
   background-position: center top;
   background-attachment: fixed;
+  background-color: #eef2f7;
   color: var(--modern-text);
 }
 
