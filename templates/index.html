@@ -170,11 +170,11 @@
                           <p class="text-success fw-semibold d-none" id="notification-status"></p>
                         </div>
                       </div>
-                      <div id="status-placeholder" class="status-placeholder">
-                        <p class="fw-semibold mb-1">Monitoring traffic</p>
-                        <p class="mb-0">We'll display live travel stats here once you start tracking.</p>
-                      </div>
-                      <div
+                        <div id="status-placeholder" class="status-placeholder">
+                          <p class="fw-semibold mb-1">Monitoring traffic</p>
+                          <p class="mb-0">We'll display live travel stats here once you start tracking.</p>
+                        </div>
+                        <div
                         id="busy-indicator"
                         class="modern-busy-indicator d-none mt-4"
                         role="status"
@@ -189,7 +189,17 @@
                           >
                         </div>
                       </div>
-                    </aside>
+                      <div id="history-panel" class="modern-history d-none">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                          <div>
+                            <p class="text-uppercase small text-accent mb-1">Recent checks</p>
+                            <p class="mb-0 text-muted small">Snapshots while waiting for the ETA to drop</p>
+                          </div>
+                          <span id="history-count" class="badge badge-muted">0</span>
+                        </div>
+                        <ul id="history-list" class="list-unstyled mb-0"></ul>
+                      </div>
+                      </aside>
                   </div>
                 </div>
 
@@ -219,6 +229,9 @@
         const useCurrentLocationButton = document.getElementById("use-current-location");
         const locationSpinner = document.getElementById("location-spinner");
         const originInput = document.getElementById("origin");
+        const historyPanel = document.getElementById("history-panel");
+        const historyList = document.getElementById("history-list");
+        const historyCount = document.getElementById("history-count");
 
         const endpoint = "{{ url_for('index') }}";
         const autocompleteEndpoint = "{{ url_for('autocomplete') }}";
@@ -229,6 +242,7 @@
 
         let pollTimer = null;
         let notificationSent = false;
+        let historyEntries = [];
 
         function clearAlert() {
           alertContainer.innerHTML = "";
@@ -271,6 +285,62 @@
           statusPlaceholder.classList.toggle("d-none", !show);
         }
 
+        function renderHistory() {
+          if (!historyPanel || !historyList) {
+            return;
+          }
+
+          if (!historyEntries.length) {
+            historyPanel.classList.add("d-none");
+            historyList.innerHTML = "";
+            if (historyCount) {
+              historyCount.textContent = "0";
+            }
+            return;
+          }
+
+          historyPanel.classList.remove("d-none");
+          historyList.innerHTML = historyEntries
+            .map((entry) => {
+              const timestamp = entry.timestamp.toLocaleTimeString([], {
+                hour: "numeric",
+                minute: "2-digit",
+              });
+              return `
+                <li class="history-entry">
+                  <div class="d-flex justify-content-between align-items-start gap-3">
+                    <div>
+                      <p class="mb-1 fw-semibold text-modern">${entry.minutes.toFixed(1)} minutes</p>
+                      <small class="text-muted">Checked at ${timestamp}</small>
+                    </div>
+                    <span class="badge badge-modern">ETA ${entry.etaDisplay}</span>
+                  </div>
+                </li>
+              `;
+            })
+            .join("");
+
+          if (historyCount) {
+            historyCount.textContent = String(historyEntries.length);
+          }
+        }
+
+        function recordHistory(result, waitingForDrop) {
+          if (!waitingForDrop) {
+            return;
+          }
+
+          const entry = {
+            minutes: result.minutes,
+            etaDisplay: result.eta_display,
+            threshold: result.threshold,
+            timestamp: new Date(),
+          };
+
+          historyEntries = [entry, ...historyEntries].slice(0, 10);
+          renderHistory();
+        }
+
         function updateResult(payload) {
           const { result, should_alert, alert_sent } = payload;
 
@@ -300,6 +370,8 @@
             waitingForDrop,
             "We're keeping an eye on traffic until the ETA is below your alert threshold.",
           );
+
+          recordHistory(result, waitingForDrop);
         }
 
         function toggleLocationBusy(active) {
@@ -488,6 +560,8 @@
           clearAlert();
           notificationStatus.classList.add("d-none");
           notificationSent = false;
+          historyEntries = [];
+          renderHistory();
 
           try {
             const initial = await fetchTravelTime();

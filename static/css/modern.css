@@ -120,6 +120,24 @@ body.theme-modern {
   box-shadow: 0 15px 30px rgba(15, 23, 42, 0.08);
 }
 
+.theme-modern .modern-history {
+  border-top: 1px dashed rgba(15, 23, 42, 0.12);
+  padding-top: 1rem;
+}
+
+.theme-modern .modern-history .history-entry {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.theme-modern .modern-history .history-entry:last-child {
+  border-bottom: none;
+}
+
+.theme-modern .modern-history .text-modern {
+  color: var(--modern-text);
+}
+
 .theme-modern .modern-status-panel .status-meta {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
